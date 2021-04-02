@@ -596,8 +596,8 @@ def discretize(p_start, p_end, max_len=15, no_answer=False):
     # Take pair (i, j) that maximizes p_joint
     max_in_row, _ = torch.max(p_joint, dim=2)
     max_in_col, _ = torch.max(p_joint, dim=1)
-    start_idxs = torch.argmax(max_in_row, dim=-1)
-    end_idxs = torch.argmax(max_in_col, dim=-1)
+    start_confs, start_idxs = torch.max(max_in_row, dim=-1)
+    end_confs, end_idxs = torch.max(max_in_col, dim=-1)
 
     if no_answer:
         # Predict no-answer whenever p_no_answer > max_prob
@@ -605,7 +605,7 @@ def discretize(p_start, p_end, max_len=15, no_answer=False):
         start_idxs[p_no_answer > max_prob] = 0
         end_idxs[p_no_answer > max_prob] = 0
 
-    return start_idxs, end_idxs
+    return start_idxs, end_idxs, torch.mul(start_confs, end_confs)
 
 
 def convert_tokens(eval_dict, qa_id, y_start_list, y_end_list, no_answer):
@@ -668,6 +668,29 @@ def eval_dicts(gold_dict, pred_dict, no_answer):
 
     if no_answer:
         eval_dict['AvNA'] = 100. * avna / total
+
+    return eval_dict
+
+def eval_dicts_custom(gold_dict, pred_dict, no_answer):
+
+    eval_dict = {} # evaluation metrics per question
+
+    avna = f1 = em = total = 0
+    for key, value in pred_dict.items():
+        total += 1
+        ground_truths = gold_dict[key]['answers']
+        prediction = value
+        # em += metric_max_over_ground_truths(compute_em, prediction, ground_truths)
+        eval_dict[key] = (metric_max_over_ground_truths(compute_f1, prediction, ground_truths),
+            compute_avna(prediction, ground_truths))
+        # if no_answer:
+        #     avna += compute_avna(prediction, ground_truths)
+
+    # eval_dict = {'EM': 100. * em / total,
+    #              'F1': 100. * f1 / total}
+
+    # if no_answer:
+    #     eval_dict['AvNA'] = 100. * avna / total
 
     return eval_dict
 
