@@ -59,7 +59,7 @@ class PreprocessData:
         self._data = {}
         self._attr = {}
 
-        self._nlp = spacy.load('en')
+        self._nlp = spacy.load('en_core_web_sm')
         self._nlp.remove_pipe('parser')
         if not any([self._use_em_lemma, self._use_pos, self._use_ent]):
             self._nlp.remove_pipe('tagger')
@@ -359,8 +359,11 @@ class PreprocessData:
         train_context_qas = self._read_json(self._train_path)
         dev_context_qas = self._read_json(self._dev_path)
 
-        logger.info('transform word to id...')
+        logger.info('train: transform word to id...')
         train_cache_nopad = self._build_data(train_context_qas, training=True)
+        train_max_answer_len = self._max_answer_len
+        
+        logger.info('dev: transform word to id...')
         dev_cache_nopad = self._build_data(dev_context_qas, training=False)
 
         self._attr['train_size'] = len(train_cache_nopad['answer_range'])
@@ -372,13 +375,18 @@ class PreprocessData:
         self._attr['embedding_size'] = self._embedding_size
         self._attr['oov_word_num'] = self._oov_num
 
-        logger.info('padding id vectors...')
+        logger.info('train: padding id vectors...')
         self._data['train'] = {
             'context': dict2array(train_cache_nopad['context']),
             'question': dict2array(train_cache_nopad['question']),
-            'answer_range': np.array(train_cache_nopad['answer_range']),
+            'answer_range': pad_sequences(train_cache_nopad['answer_range'],
+                                          maxlen=train_max_answer_len,
+                                          padding='post',
+                                          value=self.answer_padding_idx),
             'samples_id': np.array(train_cache_nopad['samples_id'])
         }
+        
+        logger.info('dev: padding id vectors...')
         self._data['dev'] = {
             'context': dict2array(dev_cache_nopad['context']),
             'question': dict2array(dev_cache_nopad['question']),

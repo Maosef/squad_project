@@ -16,7 +16,7 @@ def init_logging(config_path='config/logging_config.yaml'):
     """
     try:
         with open(config_path, 'r') as f:
-            config = yaml.load(f.read())
+            config = yaml.load(f.read(), Loader=yaml.FullLoader)
         logging.config.dictConfig(config)
     except IOError:
         sys.stderr.write('logging config file "%s" not found' % config_path)
@@ -31,7 +31,7 @@ def read_config(config_path='config/global_config.yaml'):
     """
     try:
         with open(config_path, 'r') as f:
-            config = yaml.load(f.read())
+            config = yaml.load(f.read(), Loader=yaml.FullLoader)
         return config
 
     except IOError:

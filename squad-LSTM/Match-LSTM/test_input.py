@@ -82,7 +82,7 @@ def main():
     answer = answer1[0]
 
     # preprocess
-    nlp = spacy.load('en')
+    nlp = spacy.load('en_core_web_sm')
     context_doc = DocText(nlp, context, global_config['preprocess'])
     question_doc = DocText(nlp, question, global_config['preprocess'])
     context_doc.update_em(question_doc)
