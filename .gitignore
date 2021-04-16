@@ -1,6 +1,14 @@
 .DS_Store
 .idea/
 __pycache__
+.ipynb_checkpoints
 .texpadtmp/
 data/
 save/
+# Emacs
+*~
+\#*\#
+topic-analysis/topics.txt
+topic-analysis/dev_submission.csv
+topic-analysis/dev-v2.0.json
+doubly-eponymous/doubly_eponymous.json
