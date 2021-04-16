@@ -245,7 +245,7 @@ class MatchRNNAttention(torch.nn.Module):
         wq_hq = self.linear_wq(Hq)  # (question_len, batch, hidden_size)
         wp_hp = self.linear_wp(Hpi).unsqueeze(0)  # (1, batch, hidden_size)
         wr_hr = self.linear_wr(Hr_last).unsqueeze(0)  # (1, batch, hidden_size)
-        G = F.tanh(wq_hq + wp_hp + wr_hr)  # (question_len, batch, hidden_size), auto broadcast
+        G = torch.tanh(wq_hq + wp_hp + wr_hr)  # (question_len, batch, hidden_size), auto broadcast
         wg_g = self.linear_wg(G) \
             .squeeze(2) \
             .transpose(0, 1)  # (batch, question_len)
@@ -442,7 +442,7 @@ class PointerAttention(torch.nn.Module):
     def forward(self, Hr, Hr_mask, Hk_pre):
         wr_hr = self.linear_wr(Hr)  # (context_len, batch, hidden_size)
         wa_ha = self.linear_wa(Hk_pre).unsqueeze(0)  # (1, batch, hidden_size)
-        f = F.tanh(wr_hr + wa_ha)  # (context_len, batch, hidden_size)
+        f = torch.tanh(wr_hr + wa_ha)  # (context_len, batch, hidden_size)
 
         beta_tmp = self.linear_wf(f) \
             .squeeze(2) \
@@ -708,8 +708,9 @@ class MyRNNBase(torch.nn.Module):
         _, idx_unsort = torch.sort(idx_sort, dim=0)
 
         v_sort = v.index_select(1, idx_sort)
-
-        v_pack = torch.nn.utils.rnn.pack_padded_sequence(v_sort, lengths_sort)
+        
+        # add .cpu() to avoid error. See https://github.com/pytorch/pytorch/issues/43227
+        v_pack = torch.nn.utils.rnn.pack_padded_sequence(v_sort, lengths_sort.cpu())
         v_dropout = self.dropout.forward(v_pack.data)
         v_pack_dropout = torch.nn.utils.rnn.PackedSequence(v_dropout, v_pack.batch_sizes)
 
@@ -790,7 +791,7 @@ class AttentionPooling(torch.nn.Module):
         self.linear_o = torch.nn.Linear(input_size, output_size)
 
     def forward(self, uq, mask):
-        q_tanh = F.tanh(self.linear_u(uq))
+        q_tanh = torch.tanh(self.linear_u(uq))
         q_s = self.linear_t(q_tanh) \
             .squeeze(2) \
             .transpose(0, 1)  # (batch, seq_len)
@@ -799,7 +800,7 @@ class AttentionPooling(torch.nn.Module):
         rq = torch.bmm(alpha.unsqueeze(1), uq.transpose(0, 1)) \
             .squeeze(1)  # (batch, input_size)
 
-        rq_o = F.tanh(self.linear_o(rq))  # (batch, output_size)
+        rq_o = torch.tanh(self.linear_o(rq))  # (batch, output_size)
         return rq_o
 
 
@@ -827,7 +828,7 @@ class SelfAttentionGated(torch.nn.Module):
         self.linear_t = torch.nn.Linear(input_size, 1)
 
     def forward(self, x, x_mask):
-        g_tanh = F.tanh(self.linear_g(x))
+        g_tanh = torch.tanh(self.linear_g(x))
         gt = self.linear_t.forward(g_tanh) \
             .squeeze(2) \
             .transpose(0, 1)  # (batch, seq_len)
@@ -944,7 +945,7 @@ class SFU(torch.nn.Module):
     def forward(self, input, fusions):
         m = torch.cat((input, fusions), dim=-1)
 
-        r = F.tanh(self.linear_r(m))  # (seq_len, batch, input_size)
+        r = torch.tanh(self.linear_r(m))  # (seq_len, batch, input_size)
         g = F.sigmoid(self.linear_g(m))  # (seq_len, batch, input_size)
         o = g * r + (1 - g) * input
 

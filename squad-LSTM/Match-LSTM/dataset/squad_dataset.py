@@ -301,9 +301,14 @@ class SquadDataset:
     def word_char2id(self, w):
         if w == PreprocessData.padding:  # not actual word
             return np.ones(1, )  # make sure word length>0 and right encoding, here any none-zero value not effect
-
-        w_id = map(lambda ch: self._char2id[ch], w)
-        return np.array(list(w_id))
+        
+        # w_id = map(lambda ch: self._char2id[ch], w)
+        # return np.array(list(w_id))
+        w_id = []
+        for ch in w:
+            if ch in self._char2id:
+                w_id.append(self._char2id[ch])
+        return np.array(w_id)
 
     def sentence_char2id(self, s, max_len=None):
         s_cid = list(map(lambda w: self.word_char2id(w), s))
