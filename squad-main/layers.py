@@ -99,7 +99,7 @@ class RNNEncoder(nn.Module):
         # Sort by length and pack sequence for RNN
         lengths, sort_idx = lengths.sort(0, descending=True)
         x = x[sort_idx]     # (batch_size, seq_len, input_size)
-        x = pack_padded_sequence(x, lengths, batch_first=True)
+        x = pack_padded_sequence(x, lengths.cpu(), batch_first=True)
 
         # Apply RNN
         x, _ = self.rnn(x)  # (batch_size, seq_len, 2 * hidden_size)
@@ -220,3 +220,31 @@ class BiDAFOutput(nn.Module):
         log_p2 = masked_softmax(logits_2.squeeze(), mask, log_softmax=True)
 
         return log_p1, log_p2
+
+class LinearOutput(nn.Module):
+    """Output layer used by BasicLSTMs for question answering.
+    
+    We have two separate linear units (linear transformation followed by softmax).
+    One outputs p1, the probability for the
+    start location. The other unit outputs p2, the probability for the end location.
+
+    Args:
+        hidden_size (int): Hidden size used in the BiDAF model.
+        drop_prob (float): Probability of zero-ing out activations.
+    """
+    def __init__(self, hidden_size, drop_prob):
+        super(LinearOutput, self).__init__()
+        self.linear_1 = nn.Linear(2 * hidden_size, 1)
+        self.linear_2 = nn.Linear(2 * hidden_size, 1)
+
+    def forward(self, concat_enc, mask):
+        # Shapes: (batch_size, seq_len, 1)
+        logits_1 = self.linear_1(concat_enc)
+        logits_2 = self.linear_2(concat_enc)
+
+        # Shapes: (batch_size, seq_len)
+        log_p1 = masked_softmax(logits_1.squeeze(), mask, log_softmax=True)
+        log_p2 = masked_softmax(logits_2.squeeze(), mask, log_softmax=True)
+
+        return log_p1, log_p2
+

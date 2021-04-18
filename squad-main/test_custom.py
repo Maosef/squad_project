@@ -88,7 +88,7 @@ def main(args):
 
             # Get F1 and EM scores
             p1, p2 = log_p1.exp(), log_p2.exp()
-            starts, ends, scores = util.discretize(p1, p2, args.max_ans_len, args.use_squad_v2)
+            starts, ends, scores = util.discretize_and_conf_scores(p1, p2, args.max_ans_len, args.use_squad_v2)
 
             # add confidence scores
             # change ids to string
