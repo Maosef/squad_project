@@ -11,4 +11,6 @@ save/
 topic-analysis/topics.txt
 topic-analysis/dev_submission.csv
 topic-analysis/dev-v2.0.json
-doubly-eponymous/doubly_eponymous.json
+doubly-eponymous/*
+!doubly-eponymous/get_equations.py*
+ambiguous/
