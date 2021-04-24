@@ -5,6 +5,7 @@ import unidecode
 import re
 import requests
 from wikidata.client import Client
+
 import spacy
 import time
 
@@ -126,18 +127,21 @@ for i in range(len(laws)):
 quizbowl = open("quizbowl_eponymous.txt").read().strip().split("\n")
 quizbowl_people = [find_names(i) for i in quizbowl]
 
-quizbowl = [quizbowl[i] for i in range(len(quizbowl)) if len(quizbowl_people[i])==2]
-quizbowl_people = ["{} and {}".format(quizbowl_people[i][0],quizbowl_people[i][1]) for i in range(len(quizbowl_people)) if len(quizbowl_people[i]) == 2]
+quizbowl = [quizbowl[i] for i in range(len(quizbowl)) if len(quizbowl_people[i])>1]
+quizbowl_people = [quizbowl_people[i] for i in range(len(quizbowl_people)) if len(quizbowl_people[i])>1]
+
 
 laws+=quizbowl
 people+=quizbowl_people
 
-print(people[-1],laws[-1])
+print(laws)
+print(people)
 
 print("Took {} time to generate laws".format(time.time()-start))
 start = time.time()
 print("Generating questions")
 questions = [generate_question(i) for i in laws]
+laws = [laws[i] for i in range(len(laws)) if questions[i]!=None]
 
 print("We have {} questions".format(len(questions)))
 print("Took {} time to generate questions".format(time.time()-start))
@@ -192,7 +196,7 @@ print("Took {} time to find context".format(time.time()-start))
 print("Writing to file")
 with open("doubly_eponymous_hard.jsonl","w") as w:
 	for i in range(len(laws)):
-		if contexts[i]!='' and questions[i]!=None:
+		if contexts[i]!='':
 			d = {'name': unidecode.unidecode(laws[i]), 'question': unidecode.unidecode(questions[i]),
 				'context': unidecode.unidecode(contexts[i]).strip(), 'options': [j for j in people[i]]}
 		w.write(json.dumps(d))
