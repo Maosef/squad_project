@@ -114,6 +114,51 @@ class RNNEncoder(nn.Module):
 
         return x
 
+class RNNSingle(nn.Module):
+    """General-purpose layer for encoding a sequence using a bidirectional RNN.
+
+    Encoded output is the RNN's hidden state at each position, which
+    has shape `(batch_size, seq_len, hidden_size * 2)`.
+
+    Args:
+        input_size (int): Size of a single timestep in the input.
+        hidden_size (int): Size of the RNN hidden state.
+        num_layers (int): Number of layers of RNN cells to use.
+        drop_prob (float): Probability of zero-ing out activations.
+    """
+    def __init__(self,
+                 input_size,
+                 hidden_size,
+                 num_layers,
+                 drop_prob=0.):
+        super(RNNSingle, self).__init__()
+        self.drop_prob = drop_prob
+        self.rnn = nn.LSTM(input_size, hidden_size, num_layers,
+                           batch_first=True,
+                           bidirectional=True,
+                           dropout=drop_prob if num_layers > 1 else 0.)
+
+    def forward(self, x, lengths):
+        # Save original padded length for use by pad_packed_sequence
+        # orig_len = x.size(1)
+
+        # # Sort by length and pack sequence for RNN
+        # lengths, sort_idx = lengths.sort(0, descending=True)
+        # x = x[sort_idx]     # (batch_size, seq_len, input_size)
+        # x = pack_padded_sequence(x, lengths.cpu(), batch_first=True)
+
+        # Apply RNN
+        _, x = self.rnn(x)  # (batch_size, seq_len, 2 * hidden_size)
+
+        # Unpack and reverse sort
+        # x, _ = pad_packed_sequence(x, batch_first=True, total_length=orig_len)
+        # _, unsort_idx = sort_idx.sort(0)
+        # x = x[unsort_idx]   # (batch_size, seq_len, 2 * hidden_size)
+
+        # Apply dropout (RNN applies dropout after all but the last layer)
+        # x = F.dropout(x, self.drop_prob, self.training)
+
+        return x
 
 class BiDAFAttention(nn.Module):
     """Bidirectional attention originally used by BiDAF.
@@ -222,6 +267,33 @@ class BiDAFOutput(nn.Module):
         return log_p1, log_p2
 
 class LinearOutput(nn.Module):
+    """Output layer used by BasicLSTMs for question answering.
+    
+    We have two separate linear units (linear transformation followed by softmax).
+    One outputs p1, the probability for the
+    start location. The other unit outputs p2, the probability for the end location.
+
+    Args:
+        hidden_size (int): Hidden size used in the BiDAF model.
+        drop_prob (float): Probability of zero-ing out activations.
+    """
+    def __init__(self, hidden_size, drop_prob):
+        super(LinearOutput, self).__init__()
+        self.linear_1 = nn.Linear(3 * hidden_size, 1)
+        self.linear_2 = nn.Linear(3 * hidden_size, 1)
+
+    def forward(self, concat_enc, mask):
+        # Shapes: (batch_size, seq_len, 1)
+        logits_1 = self.linear_1(concat_enc)
+        logits_2 = self.linear_2(concat_enc)
+
+        # Shapes: (batch_size, seq_len)
+        log_p1 = masked_softmax(logits_1.squeeze(), mask, log_softmax=True)
+        log_p2 = masked_softmax(logits_2.squeeze(), mask, log_softmax=True)
+
+        return log_p1, log_p2
+
+class LinearOutputOld(nn.Module):
     """Output layer used by BasicLSTMs for question answering.
     
     We have two separate linear units (linear transformation followed by softmax).
