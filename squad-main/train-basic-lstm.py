@@ -17,7 +17,7 @@ import util
 from args import get_train_args
 from collections import OrderedDict
 from json import dumps
-from models import BasicLSTM
+from models import BasicLSTM, DeepLSTM, DeepLSTMSimpleAttention
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from ujson import load as json_load
@@ -45,8 +45,8 @@ def main(args):
     word_vectors = util.torch_from_json(args.word_emb_file)
 
     # Get model
-    log.info('Building BasicLSTM model...')
-    model = BasicLSTM(word_vectors=word_vectors,
+    log.info('Building DeepLSTMSimpleAttention model...')
+    model = DeepLSTMSimpleAttention(word_vectors=word_vectors,
                   hidden_size=args.hidden_size,
                   drop_prob=args.drop_prob)
     model = nn.DataParallel(model, args.gpu_ids)
